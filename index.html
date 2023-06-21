@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Real-Time Group Discussion</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+    }
+
+    input[type="text"] {
+      width: 80%;
+      padding: 10px;
+      margin-bottom: 10px;
+    }
+
+    button {
+      padding: 10px 20px;
+    }
+
+    #messageContainer {
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Real-Time Group Discussion</h1>
+  <div id="nameContainer">
+    <label for="nameInput">Your Name:</label>
+    <input type="text" id="nameInput" placeholder="Enter your name...">
+    <button id="setNameButton">Set Name</button>
+  </div>
+  <div id="chatContainer" style="display: none;">
+    <input type="text" id="messageInput" placeholder="Type your message...">
+    <button id="sendButton">Send</button>
+    <div id="messageContainer"></div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  <script>
+    var firebaseConfig = {
+      // Your Firebase project's configuration
+      apiKey: "AIzaSyBInYvIOThN_TpVRV5CObzfzNj56BPvL-E",
+  authDomain: "iscandy-ecca8.firebaseapp.com",
+  databaseURL: "https://iscandy-ecca8-default-rtdb.firebaseio.com",
+  projectId: "iscandy-ecca8",
+  storageBucket: "iscandy-ecca8.appspot.com",
+  messagingSenderId: "232808815630",
+  appId: "1:232808815630:web:8ddf1cfb895ef69f9cf05f",
+  measurementId: "G-5NDVSG95YJ"
+    };
+    firebase.initializeApp(firebaseConfig);
+
+    var nameInput = document.getElementById('nameInput');
+    var setNameButton = document.getElementById('setNameButton');
+    var chatContainer = document.getElementById('chatContainer');
+    var messageInput = document.getElementById('messageInput');
+    var sendButton = document.getElementById('sendButton');
+    var messageContainer = document.getElementById('messageContainer');
+
+    setNameButton.addEventListener('click', function() {
+      var name = nameInput.value.trim();
+      if (name !== '') {
+        setName(name);
+        nameInput.value = '';
+        showChat();
+      }
+    });
+
+    sendButton.addEventListener('click', function() {
+      var message = messageInput.value.trim();
+      if (message !== '') {
+        sendMessage(message);
+        messageInput.value = '';
+      }
+    });
+
+    function setName(name) {
+      localStorage.setItem('userName', name);
+    }
+
+    function getName() {
+      var name = localStorage.getItem('userName');
+      return name ? name : '';
+    }
+
+    function showChat() {
+      var userName = getName();
+      if (userName !== '') {
+        document.getElementById('nameContainer').style.display = 'none';
+        document.getElementById('chatContainer').style.display = 'block';
+        document.getElementById('messageInput').focus();
+      }
+    }
+
+    function sendMessage(message) {
+      var userName = getName();
+      var messagesRef = firebase.firestore().collection('messages');
+      messagesRef.add({
+        name: userName,
+        text: message,
+        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    }
+
+    function displayMessage(doc) {
+      var name = doc.data().name;
+      var message = doc.data().text;
+      var messageElement = document.createElement('div');
+      messageElement.innerHTML = '<strong>' + name + ':</strong> ' + message;
+      messageContainer.appendChild(messageElement);
+    }
+
+    var messagesRef = firebase.firestore().collection('messages');
+    messagesRef.orderBy('timestamp').onSnapshot(function(querySnapshot) {
+      messageContainer.innerHTML = ''; // Clear the existing messages
+      querySnapshot.forEach(function(doc) {
+        displayMessage(doc);
+      });
+    });
+
+    // Check if user's name is already set and show the chat if it is
+    showChat();
+  </script>
+</body>
+</html>
