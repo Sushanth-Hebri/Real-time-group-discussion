@@ -59,6 +59,7 @@
 
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-messaging.js"></script>
   <script>
     var firebaseConfig = {
       // Your Firebase project's configuration
@@ -75,6 +76,32 @@
     firebase.initializeApp(firebaseConfig);
 
     var db = firebase.database();
+    var messaging = firebase.messaging(); // Initialize Firebase Messaging
+
+    // Request permission for notifications
+    messaging.requestPermission()
+      .then(function() {
+        console.log('Notification permission granted.');
+        return messaging.getToken();
+      })
+      .then(function(token) {
+        console.log('FCM token:', token);
+        // Save the token to the user's data in your Firebase database if needed
+      })
+      .catch(function(error) {
+        console.error('Error requesting notification permission:', error);
+      });
+
+    messaging.onMessage(function(payload) {
+      console.log('Received message:', payload);
+      // Handle the received message and display the notification
+      var notification = payload.notification;
+      var options = {
+        body: notification.body,
+        icon: notification.icon
+      };
+      new Notification(notification.title, options);
+    });
 
     var nameInput = document.getElementById('nameInput');
     var setNameButton = document.getElementById('setNameButton');
@@ -130,7 +157,7 @@
           console.log('Message sent successfully');
         })
         .catch(function(error) {
-          console.error('Error sending message: ', error);
+          console.error('Error sending message:', error);
         });
     }
 
@@ -158,6 +185,20 @@
 
     db.ref('messages').orderByChild('timestamp').on('child_added', function(snapshot) {
       displayMessage(snapshot);
+      // Send notification when a new message is received
+      if (Notification.permission === 'granted') {
+        var data = snapshot.val();
+        var name = data.name;
+        var message = data.text;
+        var notificationOptions = {
+          title: 'New Message from ' + name,
+          body: message,
+          icon: '<ICON_URL>'
+        };
+        messaging.getToken().then(function(token) {
+          firebase.messaging().sendToDevice(token, { notification: notificationOptions });
+        });
+      }
     });
 
     // Check if user's name is already set and show the chat if it is
